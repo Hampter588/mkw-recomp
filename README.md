@@ -104,7 +104,9 @@ reach, and a frame over 33.3 ms runs the race slower than real time.
 ![The Game files page, where the setup takes the player's dump](docs/images/launcher-files.png)
 
 1. Dump Mario Kart World 1.0.0 or 1.8.0 from your Switch 2 (`exefs/` and `romfs/`, decrypted; 1.8.0 with the update
-   merged into the base game's RomFS), or the same dump packed as one `.nup` or `.nx` file.
+   merged into the base game's RomFS), or the same dump packed as one `.nup` or `.nx` file. `.nsp` import is also
+   available with your own NSTool executable and keys; see [NSP input](tools/prepare/README.md#nsp-input) for requirements,
+   update/base selection, disk space and the limits of the current validation.
 2. Download the launcher for your system from [Releases](https://github.com/adriadam10/mkw-recomp/releases): on Linux
    the `.AppImage` (`-aarch64` on ARM; the default game folder is `~/.local/share/mkw-recomp`; glibc 2.31 or newer: Debian 11,
    Ubuntu 20.04, SteamOS and later), on Windows the `.zip`, unpacked into a folder. Either needs about 30 GB free.

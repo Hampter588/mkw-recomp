@@ -17,7 +17,27 @@ quotes and backslashes in POSIX installation paths instead of treating them as s
 | `update.py` | The start screen's update: `check` asks GitHub's `releases/latest` (published only, 5 s at most) whether a release is newer than this program; `fetch` downloads its package for this system with progress, checks its sha256 (GitHub's `digest`) and unpacks the Windows zip; `clean` keeps the `*.old` files the launcher left after swapping in `update-previous/` with `--previous VERSION` (the Tools page's Undo update), else removes them (`runtime/ui/launcher/launcher_update.cpp`). TLS: the system's CA store, else pip's bundled one | From the start screen; by hand: `python -I update.py check --version 0.1.3`, `fetch --tag vX --dest DIR`, `clean --game DIR [--previous VER]` |
 | `nup.py` | Reads a Switch 2 `.nup` package (the dump as one file; layout in `runtime/sdk/fs/nup.c`): `prepare.py` checks it and extracts `exefs/` (and `romfs/` when copying; linked, the runtime reads the package in place), `tools/shaders/extract.py` reads its RomFS; packs a loose dump into one (`pack`, raw, read in place) and gives the dev tools one RomFS file or folder of a packed copy (`romfs_read`, `romfs_dir`) | Imported; by hand: `uv run tools/prepare/nup.py list GAME.nup`, `extract GAME.nup DIR [--part exefs\|romfs]`, `pack DIR GAME.nup --title 0400C3F00006E000 [--version N]` |
 | `gamesource.py` | `prepare.py`'s check step: finds the player's copy (loose `exefs/` and `romfs/`, a `.nup` or a `.nx`), reads its version from `main`'s build id and checks the RomFS against it (file count, and the game data version its `ResourceSizeTable.Product.<n>` names: another version's RomFS is refused, #315); unpacks packages through the runtime (`mkw --unpack`) | imported by `prepare.py` |
+| `nsp.py` | Imports a PFS0 `.nsp` using the player's NSTool and keys, selects MKW's Program 0 NCA by its header and optionally applies an update over a separate base NSP. Streams NCAs/tickets through temporary files, retains decrypted output under `setup-work/nsp-cache` for retries and linked RomFS, then uses the normal dump validation. No tool or keys are downloaded | `prepare.py --source GAME.nsp --game DIR [--nstool PATH --keys PATH --base-nsp BASE.nsp]` |
 | `shaderstep.py` | `prepare.py`'s shaders step: the SM86 spec built from NVIDIA's nvdisasm, the shaders extracted and translated to SPIR-V (half the workers again when one dies, #24), and the step's key over the translator's files | imported by `prepare.py` |
 | `gamecode.py` | `prepare.py`'s compile step: the generated C into `mkwgame.so`/`mkwgame.dll` with the package's zig (or clang), a link probe beside the compiles and the link with its 30 min limit | imported by `prepare.py` |
 | `gamecopy.py` | `prepare.py`'s copy of a loose `exefs/` or `romfs/` into the game folder: `COPY_JOBS` files at a time, resumable (a file already there with its size is kept, each written through `.part`); after any copy, loose, `.nup` or `.nx`, the files that version does not have are removed (#261), never in a linked folder or one holding the source | imported by `prepare.py` |
 | `machine.py` | What `prepare.py`'s steps run with: the package's tools (`setup/` next to the executable) or the system's, the tool processes tied to the setup's (process group, Windows job object), and the memory that sizes the parallel jobs | Imported by `prepare.py` |
+
+## NSP input
+
+Choose an `.nsp` in the launcher's package picker, or pass it to `prepare.py --source`. Install a build of
+[NSTool](https://github.com/jakcron/nstool) that supports your package's NCA format on `PATH`, place its executable
+at `<runtime>/setup/nstool/nstool[.exe]`, or set `MKW_NSTOOL` to its path. Supply your own keyset via `--keys`,
+`MKW_NSP_KEYS` or `~/.switch/prod.keys`. Keys, tickets and game content must never be committed. The importer does
+not download keys or an extractor and does not enable new game versions: the existing 1.0.0/1.8.0 checks still apply.
+
+For an update NSP, select it as the source and provide the base game with `--base-nsp BASE.nsp` or `MKW_NSP_BASE`;
+NSTool receives `--basenca` so its RomFS is the merged view. Compressed NCZ/NSZ content is not supported. Unsupported
+encryption, missing keys, ambiguous programs or incomplete output fail before the installation's files are changed.
+NSTool compatibility with actual Switch 2 packages must be verified with the owner's dump; synthetic tests alone
+do not establish it.
+
+Import temporarily needs space for the NCAs from each NSP and the extracted dump, plus the installation's copy if
+Copy is selected. Linking uses the extracted cache rather than reading the NSP directly. The cache survives setup
+cleanup; keep it while linked. CLI extractor/key/base paths are remembered for setup retries (only paths, no key
+contents). Environment defaults must remain available on later setups. Original NSPs are never modified.

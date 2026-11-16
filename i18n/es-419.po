@@ -1872,8 +1872,10 @@ msgctxt "UI_LAUNCH_PICK"
 msgid "Choose folder"
 msgstr "Elegir carpeta"
 
+#, fuzzy
+#| msgid "Choose .nup or .nx file"
 msgctxt "UI_LAUNCH_PICK_NUP"
-msgid "Choose .nup or .nx file"
+msgid "Choose .nup, .nx or .nsp file"
 msgstr "Elegir archivo .nup o .nx"
 
 msgctxt "UI_LAUNCH_ROMFS_MODE"

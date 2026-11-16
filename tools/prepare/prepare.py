@@ -29,7 +29,7 @@ translated text per code with the detail inside: source (no earlier setup to rep
 gone: moved or renamed, #188), nogame (the folder, without exefs/main and romfs/), encrypted (exefs/main, not an NSO), version (main's build id), romfs (its file count), failed
 (a tool's English message) and io (the system's); logs/setup.log gets the English message whole.
 
-Usage: python prepare.py --source DIR|FILE.nup --game DIR [--runtime DIR] [--romfs copy|link] [--jobs N]
+Usage: python prepare.py --source DIR|FILE.nup|FILE.nx|FILE.nsp --game DIR [--runtime DIR] [--romfs copy|link] [--jobs N]
                          [--target linux|windows]
 Without --source (the launcher after an update, tools/prepare/update.py): the copy and the RomFS mode of the last
 setup in --game, from its setup-state.json; only the steps whose key changed run again.
@@ -75,6 +75,7 @@ from gamecode import DamagedSource, compile_game
 from gamesource import check, is_nx, loose_romfs, unpack
 from gamecopy import clear_dir, copy_tree, remove_stale
 from nup import Nup
+from nsp import CACHE_DIR as NSP_CACHE, imported_source, is_nsp
 from machine import (
     ZIG_CACHE,
     Failed,
@@ -235,9 +236,12 @@ def main() -> None:
     ap.add_argument(
         "--source",
         type=Path,
-        help="the folder with the player's exefs/ and romfs/, or their .nup package (default: the last's)",
+        help="the player's exefs/ and romfs/ folder, .nup, .nx or .nsp package (default: the last's)",
     )
     ap.add_argument("--game", type=Path, required=True, help="the game installation folder")
+    ap.add_argument("--nstool", type=Path, help="NSP extractor executable (default: MKW_NSTOOL, setup/nstool or PATH)")
+    ap.add_argument("--keys", type=Path, help="your own NSP keyset (default: MKW_NSP_KEYS or ~/.switch/prod.keys)")
+    ap.add_argument("--base-nsp", type=Path, help="base game NSP when --source is an update (or MKW_NSP_BASE)")
     ap.add_argument("--runtime", type=Path, help="the folder of mkw / mkw.exe (default: --game)")
     ap.add_argument("--romfs", choices=("copy", "link"), help="(default: the last setup's, else copy)")
     ap.add_argument("--jobs", type=int, default=0, help="parallel jobs (default: from cores and memory)")
@@ -309,7 +313,20 @@ def main() -> None:
     try:
         emit("step", "check")
         cc = args.cc.split() if args.cc else default_cc(game, args.target)
-        exefs_src, romfs_src, version = check(src, game, runtime)
+        # Import only during setup, off the game/UI threads. The normal version and completeness checks still
+        # decide whether anything may be installed. Keep the original NSP in state for retries and updates.
+        if is_nsp(src) or src.suffix.lower() == ".nsp":
+            nsp_options = state.get("nsp", {}) if state.get("nsp_source") == str(src) else {}
+            nsp_tool = args.nstool or nsp_options.get("tool")
+            nsp_keys = args.keys or nsp_options.get("keys")
+            nsp_base = args.base_nsp or nsp_options.get("base")
+            imported = imported_source(src, work, runtime, nsp_tool, nsp_keys, nsp_base)
+            state["nsp_source"] = str(src)
+            state["nsp"] = {k: str(Path(v).absolute()) for k, v in
+                            (("tool", nsp_tool), ("keys", nsp_keys), ("base", nsp_base)) if v}
+            exefs_src, romfs_src, version = check(imported, game, runtime)
+        else:
+            exefs_src, romfs_src, version = check(src, game, runtime)
         romfs = game / "romfs" if args.romfs == "copy" else romfs_src
         # The version (from exefs/main's build id) says which game a step built from; the folder only matters to the
         # steps that copy from it or point mkw.ini at it. With the folder in every key, moving or renaming it redid
@@ -394,7 +411,7 @@ def main() -> None:
                 warm(game, work, runtime)
             elif step == "cleanup":
                 for p in work.glob("*"):
-                    if p.is_dir() and p.name not in ("obj", ZIG_CACHE):
+                    if p.is_dir() and p.name not in ("obj", ZIG_CACHE, NSP_CACHE):
                         shutil.rmtree(p, ignore_errors=True)
                 # the languages the game does not ship (ca, gl, eu), from this version's translations (the step runs
                 # at every setup, so an update brings its new texts); about a second

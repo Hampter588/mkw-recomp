@@ -41,6 +41,11 @@ identity and MTE tags as 0 (eden-nx2, row 3).
 Every source used, with its license and what is taken from it. From MIT sources code may be taken, citing it; from
 GPL ones and from those without a license, only ideas.
 
+NSP import uses the CLI contract of [jakcron/nstool](https://github.com/jakcron/nstool) at
+`cfb826ca6c165fbcd816fd7949df88ef3d72a948` (MIT): `README.md`, `SWITCH_KEYS.md`, `src/Settings.cpp` and
+`src/NcaProcess.cpp` document keys/tickets, NCA header fields, partition extraction and `--basenca`. No implementation
+was copied; the user supplies the executable and keys. `tools/prepare/nsp.py` contains the integration.
+
 | Source | License | What is used |
 |---|---|---|
 | [Atmosphere-NX/Atmosphere](https://github.com/Atmosphere-NX/Atmosphere) `libmesosphere` (master, 12/11/2026) | GPL-2.0 | Only knowledge of the Switch kernel's argument checks: `SetThreadCoreMask` (`kern_svc_thread.cpp`: InvalidCoreId for a mask or core outside the process, InvalidCombination for an empty mask or the core outside it; -1 = the process's ideal core alone) and `CreateThread`'s core range |

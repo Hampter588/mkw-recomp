@@ -91,7 +91,7 @@ static struct {
     Uint32 picked_event;            // dialogs can finish on another thread: consume their result on the UI thread
     int picking;
     int directory_restart;
-    char source[1024];              // the player's copy: a folder, or a .nup file, from the dialogs
+    char source[1024];              // the player's copy: loose folders or a .nup/.nx/.nsp package
     int link_romfs;                 // 0 copy it into the game folder, 1 use it where it is
     int tools;                      // the setup tools are there
     char shortcut_note[1200];       // what the shortcut button did
@@ -952,7 +952,7 @@ static void setup_steps(const SetupState &st, bool ready, float act_h) {
         SDL_ShowOpenFolderDialog(picked, nullptr, L.win, nullptr, false);
     }
     ImGui::SameLine();
-    static const SDL_DialogFileFilter kPack[] = {{"Switch 2 package (.nup, .nx)", "nup;nx"}};
+    static const SDL_DialogFileFilter kPack[] = {{"Game package (.nup, .nx, .nsp)", "nup;nx;nsp"}};
     if (ImGui::Button(menu_text(UI_LAUNCH_PICK_NUP), ImVec2(0, act_h))) {   // the dump as one file (runtime/sdk/fs/pack.h)
         L.picking = 1;
         SDL_ShowOpenFileDialog(picked, nullptr, L.win, kPack, 1, nullptr, false);
